@@ -1,0 +1,28 @@
+{
+  "name": "fol2-dev-skills",
+  "owner": {
+    "name": "James To"
+  },
+  "plugins": [
+    {
+      "name": "sdlc-deliver",
+      "description": "Autonomous end-to-end SDLC delivery pipeline with 10-reviewer validation",
+      "source": "./plugins/sdlc-deliver"
+    },
+    {
+      "name": "claude-design",
+      "description": "Craft-level HTML design artifacts — landing pages, decks, prototypes, animations",
+      "source": "./plugins/claude-design"
+    },
+    {
+      "name": "humanise",
+      "description": "Rewrite AI-generated text to pass detection scanners",
+      "source": "./plugins/humanise"
+    },
+    {
+      "name": "enable-dream",
+      "description": "Patch Claude Code binary to enable /dream and auto-dream",
+      "source": "./plugins/enable-dream"
+    }
+  ]
+}
