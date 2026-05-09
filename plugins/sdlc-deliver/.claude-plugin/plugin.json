@@ -1,15 +1,5 @@
 {
   "name": "sdlc-deliver",
   "version": "1.0.0",
-  "description": "Autonomous end-to-end software development lifecycle delivery pipeline. Translates a contract into a fully implemented, reviewed, and validated codebase.",
-  "author": "James To",
-  "license": "MIT",
-  "skills": [
-    {
-      "name": "sdlc-deliver",
-      "path": "skills/sdlc-deliver/SKILL.md",
-      "description": "Autonomous SDLC delivery pipeline with planning, independent code review, 10-reviewer delivery validation, and knowledge compounding.",
-      "triggers": ["deliver this contract", "deliver", "sdlc deliver", "execute this plan end-to-end", "run the full delivery cycle", "autonomous delivery"]
-    }
-  ]
+  "description": "Autonomous end-to-end software development lifecycle delivery pipeline with 10-reviewer validation."
 }

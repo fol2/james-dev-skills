@@ -1,15 +1,5 @@
 {
   "name": "humanise",
   "version": "1.0.0",
-  "description": "Rewrites AI-generated text to read naturally and pass AI detection scanners. Register-aware with dissertation and casual modes.",
-  "author": "James To",
-  "license": "MIT",
-  "skills": [
-    {
-      "name": "humanise",
-      "path": "skills/humanise/SKILL.md",
-      "description": "Rewrite AI-generated text to pass detection scanners using positive human signals and removing AI markers.",
-      "triggers": ["humanise", "humanize", "make it sound human", "AI detection", "rewrite naturally"]
-    }
-  ]
+  "description": "Rewrite AI-generated text to pass detection scanners. Register-aware with dissertation and casual modes."
 }
