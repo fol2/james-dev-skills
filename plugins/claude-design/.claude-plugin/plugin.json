@@ -1,0 +1,15 @@
+{
+  "name": "claude-design",
+  "version": "1.0.0",
+  "description": "Craft-level HTML design artifacts — landing pages, decks, prototypes, interactive experiences, animated videos, wireframes, and design explorations.",
+  "author": "James To",
+  "license": "MIT",
+  "skills": [
+    {
+      "name": "claude-design",
+      "path": "skills/claude-design/SKILL.md",
+      "description": "Produce thoughtful design artifacts in HTML. Embodies an expert designer — not a generic web-page generator.",
+      "triggers": ["design", "mock up", "prototype", "visualise", "slide deck", "landing page", "wireframe"]
+    }
+  ]
+}

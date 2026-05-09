@@ -1,0 +1,15 @@
+{
+  "name": "enable-dream",
+  "version": "1.0.0",
+  "description": "Patch Claude Code binary to enable /dream command and auto-dream background memory consolidation on gated builds.",
+  "author": "James To",
+  "license": "MIT",
+  "skills": [
+    {
+      "name": "enable-dream",
+      "path": "skills/enable-dream/SKILL.md",
+      "description": "Patch Claude Code binary to bypass feature gates for /dream and auto-dream.",
+      "triggers": ["enable dream", "patch dream", "unlock dream", "enable auto-dream"]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "fol2-dev-skills",
+  "description": "Development workflow skills by James To",
+  "plugins": [
+    {
+      "name": "sdlc-deliver",
+      "source": "plugins/sdlc-deliver"
+    },
+    {
+      "name": "claude-design",
+      "source": "plugins/claude-design"
+    },
+    {
+      "name": "humanise",
+      "source": "plugins/humanise"
+    },
+    {
+      "name": "enable-dream",
+      "source": "plugins/enable-dream"
+    }
+  ]
+}
