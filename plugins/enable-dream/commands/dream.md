@@ -1,14 +1,18 @@
 ---
 description: "Reflective memory consolidation — review recent activity, synthesize learnings into typed memory files, and prune stale entries."
+allowed-tools: Bash(ls:*), Bash(find:*), Bash(grep:*), Bash(cat:*), Bash(stat:*), Bash(wc:*), Bash(head:*), Bash(tail:*), Bash(rm:*.md), Read, Write, Glob, Grep
+argument-hint: "[additional context]"
 ---
 
 # Dream: Memory Consolidation
 
 You are performing a dream — a reflective pass over your memory files. Synthesize what you've learned recently into durable, well-organized memories so that future sessions can orient quickly.
 
-Your memory directory path is defined in the auto-memory section of your system prompt — use that path directly. It already exists; write to it with the Write tool (do not run mkdir or check for its existence).
+Memory directory: !`find ~/.claude/projects -maxdepth 1 -type d -name "memory" | head -1 || echo "~/.claude/memory"`
 
-Session transcripts are stored as `.jsonl` files under `~/.claude/projects/` in the project directory matching the current working directory. Grep narrowly; don't read whole files.
+Session transcripts directory: !`ls -d ~/.claude/projects/*/`
+
+**Tool constraints for this run:** Shell access is restricted to read-only commands (`ls`, `find`, `grep`, `cat`, `stat`, `wc`, `head`, `tail`, and similar) plus deleting `.md` paths inside the memory directory. Edit is not permitted — memories are immutable, so delete + Write to replace, never edit in place. Plan your exploration with this in mind — no need to probe.
 
 ---
 
@@ -25,10 +29,20 @@ Look for new information worth persisting. Sources in rough priority order:
 
 1. **Session logs** (`logs/YYYY/MM/DD/<id>-<title>.md`) — the append-only activity stream, one file per session. Read the most recent 1–3 days of sessions (the filename title tells you what each was about); each line is prefix-coded (`>` user, `<` assistant, `.` tool call)
 2. **Existing memories that drifted** — facts that contradict something you see in the codebase now
-3. **Transcript search** — if you need specific context (e.g., "what was the error message from yesterday's build failure?"), grep the JSONL transcripts for narrow terms:
-   `grep -rn "<narrow term>" ~/.claude/projects/ --include="*.jsonl" | tail -50`
+3. **Transcript search** — if you need specific context (e.g., "what was the error message from yesterday's build failure?"), grep the JSONL transcripts for narrow terms. Don't exhaustively read transcripts. Look only for things you already suspect matter.
 
-Don't exhaustively read transcripts. Look only for things you already suspect matter.
+## Team memory (`team/` subdirectory)
+
+The `team/` subdirectory holds memories shared across everyone working in this repo. Other teammates' Claude sessions write here too — treat it differently from your personal files:
+
+- **Phase 1:** `ls team/` and skim it alongside your personal files. A teammate may have already captured something you'd otherwise duplicate.
+- **Phase 3:** Merge near-duplicates *within* `team/` the same way you would personal memories. If a personal memory restates a team memory, delete the personal one.
+- **Phase 4 — be conservative pruning `team/`:**
+  - DO delete or fix a team memory that is clearly contradicted by the current code, or that a newer team memory marks as superseded.
+  - DO NOT delete a team memory just because you don't recognize it or it isn't relevant to *your* recent sessions — a teammate may rely on it.
+  - When unsure, leave it. A stale team memory costs little; deleting a teammate's load-bearing note costs a lot.
+
+Do not promote personal memories into `team/` during a dream — that's a deliberate choice the user makes via `/remember`, not something to do reflexively.
 
 ## Phase 3 — Consolidate
 
@@ -60,4 +74,4 @@ A `feedback` memory's "Why: the user corrected me" framing is not evidence it's 
 
 ---
 
-Return a brief summary of what you consolidated, updated, or pruned. If nothing changed (memories are already tight), say so.
+Return a brief summary of what you consolidated, updated, or pruned — include a list of what you deleted, combined, or left alone. If nothing changed (memories are already tight), say so.
