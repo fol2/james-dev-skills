@@ -12,21 +12,28 @@ description: >-
 
 # Enable Dream — Claude Code Binary Patcher
 
-This skill patches the Claude Code binary to bypass three server-side feature
+This skill patches the Claude Code binary to bypass server-side feature
 gates that control /dream and auto-dream availability. The gates are Statsig
 feature flags that Anthropic rolls out gradually; this patch makes them always
 return true so the features work regardless of rollout status.
 
+**v2.1.146+:** Anthropic removed the native `/dream` command and its gate
+(`tengu_kairos_dream`) from the binary. The `/dream` command is now provided
+by this plugin's `commands/dream/` directory instead. The patcher still handles
+the availability gate (UI visibility) and runner gate (auto-dream background
+execution). If the patcher reports "skill gate not found", that's expected on
+v2.1.146+ — only 2 gates remain.
+
 ## What it patches
 
-Three gate functions are identified structurally (not by minified names) and
+Gate functions are identified structurally (not by minified names) and
 patched with same-length byte replacements:
 
-| Gate | Statsig flag | Controls |
-|---|---|---|
-| Availability gate | `tengu_onyx_plover` | Whether dream features are visible in UI |
-| Skill gate | `tengu_kairos_dream` | Whether `/dream` command is registered |
-| Runner gate | uses availability gate + `autoDreamEnabled` | Whether background auto-dream fires |
+| Gate | Statsig flag | Controls | Status |
+|---|---|---|---|
+| Availability gate | `tengu_onyx_plover` | Whether dream features are visible in UI | Active |
+| Skill gate | `tengu_kairos_dream` | Whether `/dream` command is registered | Removed in v2.1.146 |
+| Runner gate | uses availability gate + `autoDreamEnabled` | Whether background auto-dream fires | Active |
 
 ## How to use
 
