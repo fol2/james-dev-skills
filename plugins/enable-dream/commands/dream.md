@@ -1,39 +1,87 @@
 ---
 description: "Reflective memory consolidation — review recent activity, synthesize learnings into typed memory files, and prune stale entries."
-allowed-tools: Bash(ls:*), Bash(find:*), Bash(grep:*), Bash(cat:*), Bash(stat:*), Bash(wc:*), Bash(head:*), Bash(tail:*), Bash(rm:*.md), Read, Write, Glob, Grep
-argument-hint: "[additional context]"
+allowed-tools: Bash(ls:*), Bash(find:*), Bash(grep:*), Bash(cat:*), Bash(stat:*), Bash(wc:*), Bash(head:*), Bash(tail:*), Bash(rm:*.md), Read, Write, Glob, Grep, CronCreate, CronList, CronDelete
+argument-hint: "[nightly [cron] | additional context]"
 ---
 
-# Dream: Memory Consolidation
+# Dream
+
+User invocation: `/dream $ARGUMENTS`
+
+If `$ARGUMENTS` (after trimming) starts with the word `nightly` (optionally followed by a 5-field cron expression), follow **Mode A — Schedule** below. Otherwise follow **Mode B — Consolidate now** and treat the entire `$ARGUMENTS` string as additional context.
+
+---
+
+## Mode A — Schedule Nightly Consolidation
+
+The user wants a recurring nightly memory consolidation job.
+
+**Step 1 — Resolve the cron expression**
+
+- If `$ARGUMENTS` is just `nightly` with no cron after it, default to `13 3 * * *` (3:13am local, off-minute on purpose so fleet load isn't aligned to `:00`).
+- If `$ARGUMENTS` looks like `nightly <5 fields>`, parse the 5 fields out and use them.
+
+**Step 2 — Dedup any existing nightly job**
+
+Call `CronList`. Look for any existing job whose `prompt` is exactly `"/dream consolidate"`. If one exists, call `CronDelete` with its id first so renewal doesn't leave overlapping jobs.
+
+**Step 3 — Schedule**
+
+Call `CronCreate` with:
+- `cron`: the resolved expression
+- `prompt`: `"/dream consolidate"`
+- `recurring`: `true`
+- `durable`: `true`
+
+(The `consolidate` suffix means this prompt won't match scheduling keywords when it fires — so it runs the consolidation path, not the schedule path.)
+
+**Step 4 — Confirm**
+
+Tell the user:
+- `/dream` will run nightly at the resolved local time to consolidate and organize memories
+- The schedule persists across sessions (written to `.claude/scheduled_tasks.json`)
+- Recurring tasks auto-expire after 7 days — re-run `/dream nightly` to renew
+- Cancel anytime with `CronDelete` (include the job id)
+
+**Step 5 — Run an immediate consolidation**
+
+After confirming the schedule, run **Mode B** below in the same turn so the user sees the first consolidation result immediately.
+
+---
+
+## Mode B — Memory Consolidation
 
 You are performing a dream — a reflective pass over your memory files. Synthesize what you've learned recently into durable, well-organized memories so that future sessions can orient quickly.
 
-Memory directory: !`find ~/.claude/projects -maxdepth 1 -type d -name "memory" | head -1 || echo "~/.claude/memory"`
+Your memory directory path is given in the auto-memory section of your system prompt — use that path directly. It already exists; write to it with the Write tool (do not run `mkdir` or check for its existence).
 
-Session transcripts directory: !`ls -d ~/.claude/projects/*/`
+Session transcripts are stored as `.jsonl` files under `~/.claude/projects/<sanitized-cwd>/`. Grep narrowly; don't read whole files.
 
 **Tool constraints for this run:** Shell access is restricted to read-only commands (`ls`, `find`, `grep`, `cat`, `stat`, `wc`, `head`, `tail`, and similar) plus deleting `.md` paths inside the memory directory. Edit is not permitted — memories are immutable, so delete + Write to replace, never edit in place. Plan your exploration with this in mind — no need to probe.
 
 ---
 
-## Phase 1 — Orient
+### Phase 1 — Orient
 
 - `ls` the memory directory to see what already exists
 - Read `MEMORY.md` to understand the current index
 - Skim existing topic files so you improve them rather than creating duplicates
 - `ls -R logs/` — recent activity logs (one file per session under `YYYY/MM/DD/`). If a `sessions/` subdirectory also exists, review recent entries there too
 
-## Phase 2 — Gather recent signal
+### Phase 2 — Gather recent signal
 
 Look for new information worth persisting. Sources in rough priority order:
 
 1. **Session logs** (`logs/YYYY/MM/DD/<id>-<title>.md`) — the append-only activity stream, one file per session. Read the most recent 1–3 days of sessions (the filename title tells you what each was about); each line is prefix-coded (`>` user, `<` assistant, `.` tool call)
 2. **Existing memories that drifted** — facts that contradict something you see in the codebase now
-3. **Transcript search** — if you need specific context (e.g., "what was the error message from yesterday's build failure?"), grep the JSONL transcripts for narrow terms. Don't exhaustively read transcripts. Look only for things you already suspect matter.
+3. **Transcript search** — if you need specific context (e.g., "what was the error message from yesterday's build failure?"), grep the JSONL transcripts for narrow terms:
+   `grep -rn "<narrow term>" ~/.claude/projects/ --include="*.jsonl" | tail -50`
 
-## Team memory (`team/` subdirectory)
+Don't exhaustively read transcripts. Look only for things you already suspect matter.
 
-The `team/` subdirectory holds memories shared across everyone working in this repo. Other teammates' Claude sessions write here too — treat it differently from your personal files:
+### Team memory (`team/` subdirectory)
+
+If — and only if — a `team/` subdirectory exists in the memory directory, treat it as memories shared across everyone working in this repo. Other teammates' Claude sessions write here too:
 
 - **Phase 1:** `ls team/` and skim it alongside your personal files. A teammate may have already captured something you'd otherwise duplicate.
 - **Phase 3:** Merge near-duplicates *within* `team/` the same way you would personal memories. If a personal memory restates a team memory, delete the personal one.
@@ -44,7 +92,9 @@ The `team/` subdirectory holds memories shared across everyone working in this r
 
 Do not promote personal memories into `team/` during a dream — that's a deliberate choice the user makes via `/remember`, not something to do reflexively.
 
-## Phase 3 — Consolidate
+If no `team/` subdirectory exists, skip this section entirely.
+
+### Phase 3 — Consolidate
 
 For each thing worth remembering, write or update a memory file at the top level of the memory directory. Use the memory file format and type conventions from your system prompt's auto-memory section — it's the source of truth for what to save, how to structure it, and what NOT to save.
 
@@ -53,7 +103,7 @@ Focus on:
 - Converting relative dates ("yesterday", "last week") to absolute dates so they remain interpretable after time passes
 - Deleting contradicted facts — if today's investigation disproves an old memory, fix it at the source
 
-## Phase 4 — Prune and index
+### Phase 4 — Prune and index
 
 Update `MEMORY.md` so it stays under 200 lines AND under ~25KB. It's an **index**, not a dump — each entry should be one line under ~150 characters: `- [Title](file.md) — one-line hook`. Never write memory content directly into it.
 
@@ -62,7 +112,7 @@ Update `MEMORY.md` so it stays under 200 lines AND under ~25KB. It's an **index*
 - Add pointers to newly important memories
 - Resolve contradictions — if two files disagree, fix the wrong one
 
-### Reconcile memories against CLAUDE.md
+#### Reconcile memories against CLAUDE.md
 
 Project CLAUDE.md instructions are loaded in your system prompt. For each `feedback` or `project` memory, check whether it contradicts a CLAUDE.md instruction on the same topic:
 
@@ -75,3 +125,15 @@ A `feedback` memory's "Why: the user corrected me" framing is not evidence it's 
 ---
 
 Return a brief summary of what you consolidated, updated, or pruned — include a list of what you deleted, combined, or left alone. If nothing changed (memories are already tight), say so.
+
+### Special argument: `consolidate`
+
+If `$ARGUMENTS` starts with the word `consolidate` (this is what the scheduled cron job sends), strip that word and treat the rest as additional context. Run Mode B (you're already in it). This is how the scheduled nightly invocation reaches consolidation without re-entering the schedule branch.
+
+### Additional context (when not in scheduling/consolidate-prefix mode)
+
+If `$ARGUMENTS` is non-empty and doesn't start with `nightly` or `consolidate`, treat it as additional context the user wants you to weight while consolidating:
+
+```
+$ARGUMENTS
+```
