@@ -1,25 +1,38 @@
 ---
 description: "Reflective memory consolidation — review recent activity, synthesize learnings into typed memory files, and prune stale entries."
 allowed-tools: Bash(ls:*), Bash(find:*), Bash(grep:*), Bash(cat:*), Bash(stat:*), Bash(wc:*), Bash(head:*), Bash(tail:*), Bash(rm:*.md), Read, Write, Glob, Grep, CronCreate, CronList, CronDelete
-argument-hint: "[nightly [cron] | additional context]"
+argument-hint: "[nightly | additional context]"
 ---
 
 # Dream
 
 User invocation: `/dream $ARGUMENTS`
 
-If `$ARGUMENTS` (after trimming) starts with the word `nightly` (optionally followed by a 5-field cron expression), follow **Mode A — Schedule** below. Otherwise follow **Mode B — Consolidate now** and treat the entire `$ARGUMENTS` string as additional context.
+## Routing
+
+Compute `_` from `$ARGUMENTS`:
+
+1. Trim whitespace.
+2. If `_` equals exactly `consolidate` (whole-string, case-sensitive — this is the sentinel sent by the scheduled cron job), set `_ = ""`.
+3. Test `_` against the regex `/^(nightly|schedule|overnight)\b/i`.
+   - **If it matches:** strip the matched keyword from the start, trim again, and follow **Mode A — Schedule**. The remaining text becomes the additional-context string for the immediate-run step at the end of Mode A.
+   - **Otherwise:** follow **Mode B — Consolidate now** with `_` as the additional-context string.
 
 ---
 
 ## Mode A — Schedule Nightly Consolidation
 
-The user wants a recurring nightly memory consolidation job.
+The user wants to set up a recurring nightly memory consolidation job.
 
-**Step 1 — Resolve the cron expression**
+**Step 1 — Pick a randomized cron**
 
-- If `$ARGUMENTS` is just `nightly` with no cron after it, default to `13 3 * * *` (3:13am local, off-minute on purpose so fleet load isn't aligned to `:00`).
-- If `$ARGUMENTS` looks like `nightly <5 fields>`, parse the 5 fields out and use them.
+Generate a random number `R` in `0..359`. Build the cron string:
+
+- `minute = R mod 60`
+- `hour = floor(R / 60)` (which gives `0..5`)
+- Result: `"<minute> <hour> * * *"` — fires once per day at a random time between midnight and 6am local.
+
+The randomization spreads load across the fleet and avoids everyone landing on `:00`.
 
 **Step 2 — Dedup any existing nightly job**
 
@@ -28,24 +41,24 @@ Call `CronList`. Look for any existing job whose `prompt` is exactly `"/dream co
 **Step 3 — Schedule**
 
 Call `CronCreate` with:
-- `cron`: the resolved expression
+- `cron`: the random expression from Step 1
 - `prompt`: `"/dream consolidate"`
 - `recurring`: `true`
 - `durable`: `true`
 
-(The `consolidate` suffix means this prompt won't match scheduling keywords when it fires — so it runs the consolidation path, not the schedule path.)
+(The `consolidate` suffix means this prompt won't match the `nightly|schedule|overnight` regex when it fires — so it runs the consolidation path, not the schedule path.)
 
 **Step 4 — Confirm**
 
-Tell the user:
-- `/dream` will run nightly at the resolved local time to consolidate and organize memories
+Tell the user, formatting the time as 12-hour with am/pm:
+- `/dream` will run nightly at approximately `<HH:MM><am|pm>` local to consolidate and organize memories
 - The schedule persists across sessions (written to `.claude/scheduled_tasks.json`)
 - Recurring tasks auto-expire after 7 days — re-run `/dream nightly` to renew
-- Cancel anytime with `CronDelete` (include the job id)
+- Cancel anytime with `CronDelete` (include the job id from Step 3)
 
 **Step 5 — Run an immediate consolidation**
 
-After confirming the schedule, run **Mode B** below in the same turn so the user sees the first consolidation result immediately.
+After confirming the schedule, run **Mode B** in the same turn so the user sees the first consolidation result immediately. Pass through the additional-context string captured from the routing step (whatever followed `nightly`/`schedule`/`overnight` in the original `$ARGUMENTS`).
 
 ---
 
@@ -126,13 +139,9 @@ A `feedback` memory's "Why: the user corrected me" framing is not evidence it's 
 
 Return a brief summary of what you consolidated, updated, or pruned — include a list of what you deleted, combined, or left alone. If nothing changed (memories are already tight), say so.
 
-### Special argument: `consolidate`
+### Additional context
 
-If `$ARGUMENTS` starts with the word `consolidate` (this is what the scheduled cron job sends), strip that word and treat the rest as additional context. Run Mode B (you're already in it). This is how the scheduled nightly invocation reaches consolidation without re-entering the schedule branch.
-
-### Additional context (when not in scheduling/consolidate-prefix mode)
-
-If `$ARGUMENTS` is non-empty and doesn't start with `nightly` or `consolidate`, treat it as additional context the user wants you to weight while consolidating:
+If the routing step produced a non-empty additional-context string (i.e. `$ARGUMENTS` after stripping any `nightly`/`schedule`/`overnight` prefix and excluding the bare `consolidate` sentinel), append it verbatim below and weight it while consolidating:
 
 ```
 $ARGUMENTS
