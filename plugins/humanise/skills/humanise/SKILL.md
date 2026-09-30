@@ -8,6 +8,8 @@ description: "Rewrites AI-generated or AI-detected text to read more naturally a
 ## Purpose
 Rewrite AI-generated or AI-detected text to read more naturally and avoid AI detection patterns.
 
+**Scope:** not for business deliverables written in the repo's professional UK register (analysis write-ups, client-facing packs, business correspondence). Those must stay precise and correct, and the markers below (contractions, fillers, vague endings) would degrade them.
+
 ## Usage
 
 **Trigger command:** `/humanise`
@@ -402,7 +404,6 @@ Short sentences that are too "perfect" still trigger AI.
 - Use "such as" for lists
 - Use contractions ("We've got", not "We have")
 - Use hyphens (-) not em dashes (—)
-- Allow minor imperfections
 - Be unbalanced in treatment
 - Use colloquial phrases ("that sort of thing", "that's what this is really about")
 - Use fragments occasionally ("Compared how...")

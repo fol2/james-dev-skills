@@ -1,5 +1,5 @@
 {
   "name": "humanise",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Rewrite AI-generated text to pass detection scanners. Register-aware with dissertation and casual modes."
 }
