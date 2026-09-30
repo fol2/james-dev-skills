@@ -1,6 +1,7 @@
 ---
 name: sdlc-deliver
 description: "Autonomous end-to-end software development lifecycle delivery pipeline. Translates a contract (plan, spec, or requirements document) into a fully implemented, reviewed, and validated codebase through planning, independent code review, 10-reviewer delivery validation, and knowledge compounding. Trigger when user says 'deliver this contract', 'deliver', '/sdlc-deliver', 'execute this plan end-to-end', 'run the full delivery cycle', or provides a contract path expecting autonomous implementation. Requires a contract document path as input — rejects if none provided."
+disable-model-invocation: true
 ---
 
 # Autonomous Contract Delivery
@@ -52,14 +53,24 @@ DONE
 
 ---
 
+## Reviewer independence (applies to every review gate)
+
+Every reviewer in this pipeline — the 3 plan reviewers, the per-PR code and contract reviewers,
+and the 10 delivery reviewers — is its own subagent call with its own context, dispatched in
+parallel, and never sees another reviewer's verdict. The reason: a reviewer that shares context
+with another reviewer, or with you, inherits their conclusions, so one missed defect becomes a
+missed defect in every lens, and one agent "covering all dimensions" is one opinion, not a panel.
+So never merge reviewers into fewer calls, never top up a partial round (only a complete set of
+verdicts from one round counts), and never substitute your own assessment for a verdict.
+
+---
+
 ## Phase 0: Contract Validation
 
 1. Read $ARGUMENTS as a file path. If the file does not exist, STOP.
 2. Read the contract in full.
 3. Confirm it contains: scope, goals/requirements, acceptance criteria or gates.
 4. If the contract is malformed or empty, STOP with: "Contract at <path> is unreadable or has no requirements."
-5. Rename the session to the contract filename (without extension): `/rename <contract-filename>`
-   - e.g., for `grammar-qg-p11.md` → `/rename grammar-qg-p11`
 
 ---
 
@@ -109,7 +120,7 @@ After `/ce-plan` completes, validate the plan against the contract before any im
 
 ### Reviewer Panel (3 independent subagents)
 
-Spawn 3 independent subagent reviewers in parallel. Each validates whether the plan faithfully delivers the contract:
+Spawn the 3 reviewers (see § Reviewer independence). Each validates whether the plan faithfully delivers the contract:
 
 1. **Contract Completeness Reviewer** — every contract requirement maps to at least one plan unit; nothing is dropped, softened, or deferred without "DEFERRED: requires human" justification
 2. **Feasibility & Ordering Reviewer** — units are correctly ordered (dependencies respected), each unit is independently PR-able, file paths and acceptance criteria are specific and actionable
@@ -169,39 +180,50 @@ Worker (subagent in worktree)
     - "Your output MUST include a valid PR URL."
     - "Do not use git stash."
     - "Include 'Plan Deviations' in PR body if you deviate."
-    - For UI/UX units: invoke /ce-frontend-design
+    - For UI/UX units: invoke the frontend-design skill (/frontend-design);
+      for Allianz-branded output use /allianz-one-vis instead
 ```
 
 ### MANDATORY: Per-unit review — code + contract (DO NOT SKIP)
 
 Every PR MUST go through BOTH independent code review AND contract alignment review before merge. These are NOT optional. Do not merge without approval from both reviewer types.
 
-**Each reviewer = 1 separate independent subagent call.** All reviewers are dispatched in parallel. They do not share context, do not see each other's verdicts, and each returns its own independent judgement.
+All reviewers follow § Reviewer independence.
+
+**Code reviewer briefs.** Compound-engineering ships its reviewer personas as prompt files, not as
+named agent types, so there is no `ce-*-reviewer` agent to call. Brief each code reviewer as a
+general-purpose subagent whose instructions are the content of one persona file from the
+installed plugin: `skills/ce-code-review/references/personas/<persona>.md` under the
+compound-engineering install path listed in `~/.claude/plugins/installed_plugins.json`. Append the
+PR URL and diff, and require the verdict format below. If the persona files cannot be found, run
+`/ce-code-review mode:agent <PR URL>` for the code review instead (it selects and dispatches the
+personas itself) — treat any verdict other than `Ready to merge`, or a `failed`/`degraded`
+status, as BLOCKING — and still dispatch the contract reviewer separately.
 
 ```
-Code Reviewers (each is 1 separate Agent call, all dispatched in parallel)
-  → ce-correctness-reviewer        — 1 independent agent call
-  → ce-maintainability-reviewer    — 1 independent agent call
-  → ce-testing-reviewer            — 1 independent agent call
-  → ce-project-standards-reviewer  — 1 independent agent call
-  → + conditional (each also 1 independent agent call):
-    ce-security-reviewer, ce-performance-reviewer,
-    ce-reliability-reviewer, ce-data-migrations-reviewer
+Code Reviewers (one subagent per persona file, all dispatched in parallel)
+  → correctness-reviewer.md
+  → maintainability-reviewer.md
+  → testing-reviewer.md
+  → project-standards-reviewer.md
+  → + conditional, when the diff touches that surface:
+    security-reviewer.md, performance-reviewer.md,
+    reliability-reviewer.md, data-migration-reviewer.md
   → Each returns: APPROVE or BLOCKING (with findings)
 
-Contract Reviewer (1 separate independent Agent call, dispatched in parallel with code reviewers)
+Contract Reviewer (one subagent, dispatched in parallel with the code reviewers)
   → Reads: the original CONTRACT (not just the plan) + the PR diff
   → Validates: does this unit deliver what the contract requires for this scope?
   → Checks: no requirement dropped, no acceptance criteria missed, no scope creep
   → Returns: APPROVE or BLOCKING (with specific contract requirement references)
 
-Total per PR: minimum 5 separate Agent calls (4 code + 1 contract), up to 9 if all conditional reviewers apply. You cannot combine any of these into fewer calls.
+Total per PR: minimum 5 reviewers (4 code + 1 contract), up to 9 if all conditional reviewers apply.
 
 Review Follower (if any BLOCKING from code OR contract reviewer)
   → git pull origin <branch> first
   → Address all blocking findings
   → Push fixes
-  → Re-dispatch ALL reviewers (code + contract, not just blockers) — same number of separate Agent calls
+  → Re-dispatch ALL reviewers (code + contract, not just blockers)
   → Repeat until zero blockers
 ```
 
@@ -243,11 +265,7 @@ This step is the core quality gate of the delivery. It MUST run. The contract is
 
 ### Reviewer Panel (10 independent subagents)
 
-ALL 10 reviewers MUST be dispatched as **10 separate subagent calls**. You cannot reduce this number.
-
-**Each reviewer = 1 independent subagent.** You MUST spawn 10 separate Agent tool calls — one per dimension. You cannot combine multiple dimensions into a single agent call. A single agent "reviewing all 10 dimensions" is NOT 10 independent reviewers — it is 1 reviewer pretending to be 10. Independence means each reviewer has its own context, its own judgement, and returns its own verdict without seeing the others.
-
-Spawn 10 independent subagent reviewers in parallel (10 separate Agent calls):
+One reviewer per dimension, per § Reviewer independence:
 
 1. **Functional Completeness** — every contract requirement is implemented and working
 2. **Test Coverage** — all acceptance criteria have corresponding tests
@@ -278,20 +296,9 @@ These are the HARDEST rules in the entire pipeline. This is where delivery quali
    - Claim the dimension is "N/A" to skip it (if truly N/A, the reviewer itself will return PASS — you do not make this judgement)
    - Proceed to Phase 5 while any BLOCK exists
 
-2. **All 10 reviewers must be dispatched as 10 SEPARATE subagent calls. Every time.** You cannot:
-   - Skip reviewers because "this contract doesn't have UI" (the reviewer decides that, not you)
-   - Reduce to 6 or 8 reviewers to save tokens
-   - Merge dimensions (e.g., "security and performance are both fine" — they are separate reviewers)
-   - Combine multiple dimensions into one agent call (that is 1 reviewer, not 10)
-   - Substitute your own assessment for a reviewer's verdict
-   - Dispatch a single agent "covering all dimensions" — each dimension = 1 independent agent call
+2. **The full panel runs every round.** All 10 dimensions are dispatched every time, including one you judge irrelevant or cheap to skip — whether it applies is that reviewer's call (rule 6).
 
-3. **Re-review means ALL 10. Every time. From scratch.** After fixes:
-   - Dispatch all 10 again — not just the ones that blocked
-   - Previously-passing reviewers can issue NEW blocks on the re-review
-   - This is by design: fixes can break previously-passing areas
-   - You cannot "run the remaining N" — if you dispatched fewer than 10 initially, that was a protocol violation. The fix is to re-run ALL 10 from scratch, not to "top up" with the missing ones
-   - Partial runs are invalid. Only a complete set of 10 simultaneous PASS verdicts from the same round counts
+3. **Re-review means ALL 10, from scratch.** After fixes, dispatch all 10 again, not just the ones that blocked: fixes can break previously-passing areas, so a previously-passing reviewer may issue a new block, and only a complete set of 10 PASS verdicts from the same round counts.
 
 4. **The fix cycle has its own mandatory code review.** The `/ce-work` (fix mode) follows the full Phase 3 per-unit pipeline including MANDATORY code reviewers. You cannot:
    - Push fixes directly without a PR
@@ -424,25 +431,7 @@ If `/dream` is available, invoke it. Consolidate session learnings into persiste
 
 ### Orchestrator integrity rule
 
-You are NOT allowed to rationalise skipping reviewers or overriding their verdicts. If you catch yourself thinking any of the following, STOP — you are about to violate protocol:
-
-| Rationalisation thought | What you MUST do instead |
-|---|---|
-| "This BLOCK is minor / advisory" | Run the fix cycle. BLOCK = fix. |
-| "This dimension doesn't apply" | Dispatch the reviewer anyway. Let IT decide. |
-| "The reviewer is wrong" | Run the fix cycle. Only a re-review clears a BLOCK. |
-| "I'll fix it in the report" | No. Fix it in code. Reports document, they don't fix. |
-| "Good enough for this contract" | Not your call. 10 reviewers decide "good enough". |
-| "I'll save tokens by skipping X" | Protocol is non-negotiable. Dispatch all. |
-| "The contract says N/A" | Dispatch reviewer. It will PASS if truly N/A. |
-| "I already checked this myself" | Self-review ≠ independent review. Dispatch. |
-| "Only 1 reviewer blocked, rest passed" | 1 BLOCK = fix cycle → re-review ALL 10. |
-| "The findings overlap with Phase 3 review" | Phase 4 is a different concern. Run it fully. |
-| "I'll dispatch one agent for all 10 dimensions" | No. 10 dimensions = 10 separate Agent calls. 1 agent ≠ 10 reviewers. |
-| "I can cover these in fewer agents" | Independence requires separate context. Each reviewer = 1 agent call. |
-| "I'll run the remaining N reviewers" | No. Partial runs are invalid. Re-run ALL 10 from scratch. |
-| "3 passed already, I just need the other 7" | Invalid. All 10 must come from the same round. Start over. |
-| "CI is flaky, I'll merge anyway" | No. Red CI = no merge. Investigate and fix. |
+You may not skip a reviewer, shrink a panel, or override a verdict: a BLOCK is cleared only by a fix and a re-review, and a gap is fixed in code, never explained away in the report. The Phase 3 and Phase 4 rules and § Reviewer independence are the whole of it — if you find yourself arguing that one of them does not apply to this case, that argument is the signal to follow it.
 
 ## No-Regression Guarantees
 
