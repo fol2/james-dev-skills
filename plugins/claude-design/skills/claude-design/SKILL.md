@@ -11,6 +11,8 @@ Embody an expert in whichever domain the task calls for — animator, UX designe
 
 > **Source & adaptation.** The principles below are adapted from Anthropic's design-artefact system prompt. Tool names and APIs have been generalised so they work inside any host (Claude Code, Copilot CLI, Gemini CLI, Claude.ai). Use whatever file/edit/run tools your current environment provides — the philosophy is what matters.
 
+> **Allianz output.** For anything produced for Allianz, `allianz-one-vis` overrides the fonts, palette and imagery rules here — so Allianz Neo with its Arial fallback is correct there, whatever the font list under Content Guidelines says.
+
 ---
 
 ## Workflow
@@ -26,7 +28,7 @@ Understand → Explore resources → Plan → Build → Verify → Summarise bri
 5. **Verify.** Check the artefact loads cleanly, inspect for console errors, sanity-check the output in a browser where possible.
 6. **Summarise extremely briefly** — caveats and next steps only. Don't narrate what you did; the diff shows that.
 
-Asking many good questions at the start is essential. One round of focused questions beats three rounds of back-and-forth after the fact.
+When context is missing, ask at the start: one round of focused questions beats three rounds of back-and-forth after the fact.
 
 ---
 
@@ -40,7 +42,7 @@ When starting something new or the ask is ambiguous, ask liberally. Good questio
 - Ask how divergent: by-the-book, novel, or a mix
 - Which dimension matters most: flows, copy, or visuals
 - Ask which tweaks they'd like exposed
-- Ask at least 4 problem-specific questions on top of the above
+- Ask problem-specific questions wherever the context you need is missing — there is no quota
 
 Skip questions for small tweaks, follow-ups, or when the user has given you everything you need (e.g. "recreate the composer UI from this codebase").
 
@@ -83,7 +85,6 @@ If you do not have an icon, asset, or component, **draw a placeholder** — in h
 - **Avoid writing large files (>1000 lines).** Split into smaller JSX files and import them into a main file at the end.
 - For decks and videos, persist the playback position (current slide, current time) to `localStorage`, and re-read on load. Users refresh often during iterative design.
 - When adding to an existing UI, understand the visual vocabulary first and follow it. Match copy style, colour palette, tone, hover/click states, animation styles, shadows, cards, layouts, density. Think out loud about what you observe.
-- **Never use `scrollIntoView`** — it can mess up the host app. Use other DOM scroll methods instead.
 - You are better at recreating or editing interfaces from code than from screenshots. When given source, focus on exploring code and design context rather than screenshots.
 - **Colour usage:** try to use colours from the brand or design system, if one exists. If too restrictive, use `oklch(...)` to define harmonious colours that match. Avoid inventing new colours from scratch.
 - **Emoji usage:** only if the design system uses them.
@@ -126,19 +127,6 @@ For video-style HTML artefacts, use a timeline-based `<Stage>` + `<Sprite>` patt
 **Slide numbers are 1-indexed.** Label slides like `01 Title`, `02 Agenda` — matching the `{idx + 1}/{total}` counter the user sees. When someone says "slide 5", they mean the fifth slide (label `05`), never array position `[4]`. Humans don't speak 0-indexed.
 
 **Fixed-size content must implement its own scaling.** Use a fixed canvas (default 1920×1080, 16:9) wrapped in a full-viewport stage that letterboxes it on black via `transform: scale()`, with prev/next controls **outside** the scaled element so they stay usable on small screens.
-
-**Speaker notes** (only when the user asks for them): add a JSON block with per-slide notes, in head:
-
-```html
-<script type="application/json" id="speaker-notes">
-[
-  "Slide 0 notes",
-  "Slide 1 notes"
-]
-</script>
-```
-
-The host renders speaker notes from this tag. If using `postMessage` to sync with a parent, post `{slideIndexChanged: N}` on init and every slide change.
 
 **Never add speaker notes unless told explicitly.**
 
@@ -201,17 +189,15 @@ For interactive prototypes, consider exposing a **Tweaks panel** — a small flo
 - If the user asks for multiple variants of an element, use tweaks to cycle through them.
 - If the user does not ask for tweaks, add a couple anyway — expose interesting possibilities.
 
-Wrap tweakable defaults in a JSON block inside an inline `<script>` so a host or persistence layer can rewrite them:
+Keep tweakable defaults in one object near the top of the inline `<script>`, so they are easy to find and change:
 
 ```js
-const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
-  "primaryColor": "#D97757",
-  "fontSize": 16,
-  "dark": false
-}/*EDITMODE-END*/;
+const TWEAK_DEFAULTS = {
+  primaryColor: "#D97757",
+  fontSize: 16,
+  dark: false
+};
 ```
-
-The block between the markers **must be valid JSON** (double-quoted keys and strings). Exactly one such block per HTML file.
 
 ---
 
