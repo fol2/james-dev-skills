@@ -1,5 +1,5 @@
 {
   "name": "sdlc-deliver",
-  "version": "1.0.2",
-  "description": "Autonomous end-to-end software development lifecycle delivery pipeline with 10-reviewer validation."
+  "version": "2.0.0",
+  "description": "AI-native delivery pipeline: committed intent, spec and plan artefacts, one verification command per unit, locked tests, REVIEW.md passes, a fresh-context verifier and four risk-tiered owner gates."
 }

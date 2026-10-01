@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "sdlc-deliver",
-      "description": "Autonomous end-to-end SDLC delivery pipeline with 10-reviewer validation",
+      "description": "AI-native SDLC delivery: artefact chain, verification commands, locked tests and risk-tiered owner gates",
       "source": "./plugins/sdlc-deliver"
     },
     {
