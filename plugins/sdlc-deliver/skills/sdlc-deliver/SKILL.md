@@ -203,8 +203,8 @@ the persona files cannot be found, run `/ce-code-review mode:agent <PR URL>` for
 instead (it selects and dispatches the personas itself, with the calibration block) — treat any
 verdict other than `Ready to merge`, or a `failed`, `degraded` or `skipped` status, as BLOCKING —
 and still dispatch the contract reviewer separately. A `skipped` status means a skip rule fired
-and no reviewer ran, so it counts as no review: get a real review (the skip reason names how to
-force one) before the PR can merge.
+and no reviewer ran, so it counts as no review: get a real review (the trivial-PR skip reason
+names how to force one) before the PR can merge.
 
 ```
 Code Reviewers (one subagent per persona file, all dispatched in parallel)
