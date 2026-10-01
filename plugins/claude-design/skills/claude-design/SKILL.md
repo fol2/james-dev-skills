@@ -1,6 +1,6 @@
 ---
 name: claude-design
-description: "Produce thoughtful, craft-level design artifacts in HTML — landing pages, decks, prototypes, interactive experiences, animated videos, wireframes, and design explorations. Use this whenever the user asks to design, mock up, prototype, visualise, or explore an interface, slide deck, animation, or any visual artifact; whenever they paste a Figma link or screenshot and ask for a rebuild; whenever a task benefits from variations, tweaks, or multiple design options; or whenever they want HTML/CSS/JS output that must look polished rather than generic AI slop. Embodies the discipline of an expert designer — animator, UX designer, slide designer, prototyper — not a generic web-page generator."
+description: "Produce thoughtful, craft-level design artefacts in HTML — landing pages, decks, prototypes, interactive experiences, animated videos, wireframes, and design explorations. Use this whenever the user asks to design, mock up, prototype, or explore an interface, slide deck, animation, or other visual artefact; whenever they paste a Figma link or screenshot and ask for a rebuild; whenever a task benefits from variations, tweaks, or multiple design options; or whenever they want HTML/CSS/JS output that must look polished rather than generic AI slop. Not for charts, graphs or data-visualisation dashboards (use dataviz), and not for anything produced for Allianz or in the Allianz brand (use allianz-one-vis; for an Allianz deck, ppt-master with allianz-ppt-templates). Embodies the discipline of an expert designer — animator, UX designer, slide designer, prototyper — not a generic web-page generator."
 ---
 
 # Claude Design
@@ -223,6 +223,8 @@ If asked to recreate a company's distinctive UI patterns, proprietary command st
 
 ## When NOT to Invoke This Skill
 
+- Charts, graphs and data-visualisation dashboards — use `dataviz`, which carries the chart method and palette rules this skill does not
+- Anything produced for Allianz or in the Allianz brand — use `allianz-one-vis` (and, for an Allianz deck, `ppt-master` with `allianz-ppt-templates`), because the brand rules there override the type, colour and imagery guidance here
 - Pure backend/API work without a visual component
 - Data engineering, pipeline, or infrastructure work
 - Writing documentation or prose content (unless styled as a designed artifact)
