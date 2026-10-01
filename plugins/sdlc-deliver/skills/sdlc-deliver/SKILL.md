@@ -47,8 +47,9 @@ that argument is the signal to follow it.
 3. Choose the mode: `git remote` prints nothing → local mode [L1]; otherwise remote mode with `gh`.
 4. Load the house rules: the target repo's CLAUDE.md, and its `REVIEW.md`, else
    `references/REVIEW.default.md`.
-5. Make a worktree for the artefacts (`/ce-worktree`, or `git worktree add <path> -b delivery/<slug>`).
-   All writes happen in worktrees. The main checkout never changes branch.
+5. Make a worktree for the artefacts on branch `delivery/<slug>`, in a sibling directory outside the
+   main checkout (`git worktree add ../<repo>-wt-<slug> -b delivery/<slug>`), so the main checkout stays
+   clean. All writes happen in worktrees. The main checkout never changes branch.
 
 **Resume.** When the input is an artefact folder, or an artefact whose status line reads
 `awaiting G<n>`, follow [T4]: re-read every artefact from disk, record the owner's reply, and continue
@@ -99,12 +100,16 @@ command? Fix the plan until both answers are yes, then commit it.
 **G2** [T2] fires for medium and high risk. A low-risk plan records `G2 not required (low risk)` and
 the run continues.
 
+Once G2 is passed or not required, merge `delivery/<slug>` into main. In remote mode that is a doc-only
+PR; in local mode it is [L2]. Units then branch from a main that holds the artefacts. Each later edit to
+an artefact (a locked-test sha, the report) travels in the PR of the unit that makes it.
+
 ## Stage 4: Build and verify, per unit
 
 In plan order. Parallel groups run together.
 
-1. A worker subagent, using `/ce-work` as the engine, builds the unit in its own worktree on
-   `feat/<slug>-u<N>`, branched from the current main.
+1. A worker subagent, using `/ce-work` as the engine, builds the unit in its own sibling-directory
+   worktree on `feat/<slug>-u<N>`, branched from the current main.
 2. **Bug unit:** the worker first commits the failing test on its own and confirms it fails for the
    stated reason. It records the sha in plan.md's locked-test table [V2]. Only then does it write the
    fix.
