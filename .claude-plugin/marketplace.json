@@ -16,7 +16,7 @@
     },
     {
       "name": "humanise",
-      "description": "Rewrite AI-generated text to pass detection scanners",
+      "description": "Rewrite AI-sounding text in a natural human voice, for the dissertation and casual registers only",
       "source": "./plugins/humanise"
     },
     {
