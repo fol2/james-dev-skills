@@ -1,455 +1,193 @@
 ---
 name: sdlc-deliver
-description: "Autonomous end-to-end software development lifecycle delivery pipeline. Translates a contract (plan, spec, or requirements document) into a fully implemented, reviewed, and validated codebase through planning, independent code review, 10-reviewer delivery validation, and knowledge compounding. Trigger when user says 'deliver this contract', 'deliver', '/sdlc-deliver', 'execute this plan end-to-end', 'run the full delivery cycle', or provides a contract path expecting autonomous implementation. Requires a contract document path as input — rejects if none provided."
+description: "AI-native delivery pipeline. Turns an idea, an issue or a contract into committed intent, spec and plan artefacts, builds each unit in a worktree against its own verification command, reviews each PR by REVIEW.md passes, verifies the whole with a fresh-context verifier, and feeds mistakes back into CLAUDE.md, skills and evals. The owner decides only at four risk-tiered gates (G1 intent and spec, G2 plan, G3 high-risk merge, G4 runtime or outward release). Trigger when the user says '/sdlc-deliver <path>', 'deliver this contract', 'deliver', 'execute this plan end to end' or 'run the full delivery cycle'. Needs a path to an idea, issue, contract or earlier artefact folder; refuses without one."
 disable-model-invocation: true
 ---
 
-# Autonomous Contract Delivery
-
-Execute a full autonomous delivery pipeline for the contract at $ARGUMENTS.
-
-**Hard gate: if $ARGUMENTS is empty or does not point to a readable contract document, STOP immediately.** Say: "No contract provided. Usage: `/sdlc-deliver path/to/contract.md`" and do nothing else.
-
----
-
-## Pipeline
-
-```
-Phase 0: Contract (provided) ─── REJECT if missing
-    │
-    ▼
-Phase 1: /ce-plan ─── translate contract → implementation plan (no questions)
-    │
-    ▼
-Phase 1.5: Plan Review ─── 3 reviewers validate plan vs contract (all must PASS)
-    │
-    ▼
-Phase 1.5: Commit & merge plan PR (doc-only, CI auto-pass)
-    │
-    ▼
-Phase 2: /ce-worktree ─── create isolated worktree (no questions)
-    │
-    ▼
-Phase 3: /ce-work (BUILD) ─── implement plan units (worker → MANDATORY reviewers → merge)
-    │
-    ▼
-Phase 4: Delivery ─── 10 contract reviewers validate entire contract (MANDATORY, DO NOT SKIP)
-    │                  if blockers: /ce-work (FIX) → MANDATORY reviewers → merge → re-review ALL 10
-    ▼
-Phase 5: Report ─── completion report .md, PR merged to main
-    │
-    ▼
-Phase 6: Housekeeping ─── remove worktree, delete branches, prune refs
-    │
-    ▼
-Phase 7: /compound-engineering:ce-compound ─── document solved problem
-    │
-    ▼
-Phase 8: /dream ─── consolidate session learnings (if available)
-    │
-    ▼
-DONE
-```
+# AI-native delivery
 
----
+Deliver the work described at $ARGUMENTS: an idea, an issue, a contract, or the artefact folder (or an
+artefact) of an earlier run.
 
-## Reviewer independence (applies to every review gate)
+**No input, no run.** If $ARGUMENTS is empty or names nothing readable, stop and reply only:
+"No input provided. Usage: `/sdlc-deliver path/to/idea-issue-or-contract.md`".
 
-Every reviewer in this pipeline — the 3 plan reviewers, the per-PR code and contract reviewers,
-and the 10 delivery reviewers — is its own subagent call with its own context, dispatched in
-parallel, and never sees another reviewer's verdict. The reason: a reviewer that shares context
-with another reviewer, or with you, inherits their conclusions, so one missed defect becomes a
-missed defect in every lens, and one agent "covering all dimensions" is one opinion, not a panel.
-So never merge reviewers into fewer calls, never top up a partial round (only a complete set of
-verdicts from one round counts), and never substitute your own assessment for a verdict.
+## How it works
+
+Agents do everything that needs no judgement; the owner decides only what does, at gates tiered by
+risk ([T1], [T2]). Each stage commits an artefact the next stage reads, so a run survives a lost
+context and git history is the audit trail. Done is proved by commands that pass ([V1], [V2]), not by
+how many reviewers agreed. Every delivery feeds its mistakes back ([V7]).
+
+Paths below are relative to this skill's base directory. The locked-test check is
+`${CLAUDE_PLUGIN_ROOT}/scripts/locked_tests_check.py`; if that variable is not expanded, the plugin
+root is the directory two levels above this skill's base directory.
 
----
+| Reference | Holds |
+|---|---|
+| `references/gates.md` | risk tier [T1], gates G1–G4 [T2], questions [T3], stopping and resuming at a gate [T4], runtime and outward steps [T5] |
+| `references/verification.md` | one command per unit [V1], locked tests [V2], the verifier [V3], declared dimensions [V4], Stage 6 [V5], mechanical before prose [V6], the loop [V7] |
+| `references/REVIEW.default.md` | PR passes [R1] [R2] [R3], severity [R4], skips [R5], re-review [R6], pass brief [R7]; used only when the target repo has no `REVIEW.md` |
+| `references/local-mode.md` | repos with no remote [L1], a branch as the PR [L2], local checks as CI [L3] |
+| `references/templates/` | `intent.md`, `spec.md`, `plan.md`, `report.md` |
+
+## Integrity rule
+
+Only a fix clears a finding. An Important finding clears when the code is fixed and the pass that
+raised it re-reviews it ([R6]); a failing check is fixed in code, never explained away in the report.
+No agent reviews or approves work it wrote, and you, the orchestrator, never clear a finding or
+overturn a verdict yourself. If you find yourself arguing that a rule does not apply to this case,
+that argument is the signal to follow it.
 
-## Phase 0: Contract Validation
+## Stage 0: Set up
 
-1. Read $ARGUMENTS as a file path. If the file does not exist, STOP.
-2. Read the contract in full.
-3. Confirm it contains: scope, goals/requirements, acceptance criteria or gates.
-4. If the contract is malformed or empty, STOP with: "Contract at <path> is unreadable or has no requirements."
+1. Read the input in full and classify it: idea, issue, contract, or earlier artefacts (resume).
+2. Choose a kebab-case slug. The artefact folder is the target repo's `docs/delivery/<slug>/`, or, for
+   analytics work in a job folder, that job folder.
+3. Choose the mode: `git remote` prints nothing → local mode [L1]; otherwise remote mode with `gh`.
+4. Load the house rules: the target repo's CLAUDE.md, and its `REVIEW.md`, else
+   `references/REVIEW.default.md`.
+5. Make a worktree for the artefacts (`/ce-worktree`, or `git worktree add <path> -b delivery/<slug>`).
+   All writes happen in worktrees. The main checkout never changes branch.
 
----
+**Resume.** When the input is an artefact folder, or an artefact whose status line reads
+`awaiting G<n>`, follow [T4]: re-read every artefact from disk, record the owner's reply, and continue
+from the stage after the gate. Never redo a stage whose artefact is accepted.
+
+Report progress only at stage transitions, one line each: "Stage N complete: <artefact>."
 
-## Phase 1: Plan (`/ce-plan`)
+## Stage 1: Intent → `intent.md`
 
-Invoke `/ce-plan` with these overrides to its default behaviour:
+From `references/templates/intent.md`: the originator's problem, the outcome wanted, constraints and
+non-goals. Quote the originator's own words. Anything only the owner can decide goes under "Open
+questions", each with your proposed answer, so "accept" is a valid reply.
+
+## Stage 2: Spec → `spec.md`
 
-### Input to `/ce-plan`
+Requirements and design in one pass, from `references/templates/spec.md`, with the target repo's
+CLAUDE.md and any relevant skills loaded. Three parts are load-bearing:
 
-Pass the full contract content as the planning input. Add this preamble:
+1. **Risk tier** by the rubric [T1], quoting the line that decided it.
+2. **Review dimensions**: the three core dimensions plus the specialists the rubric selects [V4].
+3. **Acceptance checks**: every requirement as a command with its expected result.
+
+A step in the input that an agent cannot perform becomes an executable equivalent: manual QA becomes
+automated tests, "observe production for N days" becomes time-simulation tests. A judgement call (a
+stakeholder sign-off, a legal or compliance approval) stays human: it becomes a gate item or a
+"Deferred: requires a human" entry, never a reviewer's verdict.
 
-```
-You are planning the autonomous delivery of this contract. Rules:
-
-1. The plan MUST deliver 100% of the contract. No fallbacks, no "stretch goals", no "nice to have". Every stated requirement becomes a planned unit of work.
-
-2. Do NOT ask questions. The contract is complete and organised. If a requirement is ambiguous, interpret it in the way that delivers the most value while remaining safe.
-
-3. Convert any non-agent workflow to autonomous equivalents:
-   - "Run a cohort of real accounts for 5 days" → create test fixtures/mocks that simulate multi-day cohort data, generate synthetic evidence, write validation tests that prove the system would behave correctly under real cohort conditions
-   - "Manual QA by a team member" → automated test suites + browser testing + validation scripts
-   - "Get sign-off from stakeholder" → delivery cycle reviewers validate against contract gates
-   - "Observe production for N days" → time-simulation tests, state-machine coverage, date-key rollover tests
-
-4. The ONLY items that remain non-autonomous are those requiring:
-   - Physical hardware the agent cannot access
-   - Third-party credentials not available in the environment
-   - Legal/compliance sign-off that requires a named human
-   Flag these as "DEFERRED: requires human" with clear explanation.
-
-5. Structure the plan as ordered units of work, each independently PR-able.
-
-6. Each unit must specify: files to create/modify, tests to write, acceptance criteria derived from the contract.
-```
-
-### Behaviour
-
-- `/ce-plan` runs to completion without asking questions
-- The plan is saved to the contract's directory as `<contract-name>-plan.md`
-- If `/ce-plan` attempts to ask a question, override: "Decide autonomously based on the contract. Do not ask."
-
----
-
-## Phase 1.5: Plan Review (3 independent reviewers)
-
-After `/ce-plan` completes, validate the plan against the contract before any implementation begins.
-
-### Reviewer Panel (3 independent subagents)
-
-Spawn the 3 reviewers (see § Reviewer independence). Each validates whether the plan faithfully delivers the contract:
-
-1. **Contract Completeness Reviewer** — every contract requirement maps to at least one plan unit; nothing is dropped, softened, or deferred without "DEFERRED: requires human" justification
-2. **Feasibility & Ordering Reviewer** — units are correctly ordered (dependencies respected), each unit is independently PR-able, file paths and acceptance criteria are specific and actionable
-3. **Autonomous Conversion Reviewer** — non-agent workflows are converted to autonomous equivalents that genuinely validate the same concerns (not just skipped or trivialised)
-
-### Protocol
-
-Each reviewer:
-- Reads the **original contract** in full
-- Reads the **generated plan** in full
-- Returns: PASS or BLOCK (with specific findings and suggested fixes)
-
-### Gate
-
-ALL 3 reviewers must PASS. If any blocks:
-1. Collect all blocking findings
-2. Revise the plan directly (fix the plan document, not the code)
-3. Re-invite ALL 3 reviewers on the revised plan
-4. Repeat until all 3 simultaneously PASS
-
-### Commit the agreed plan
-
-Once all 3 reviewers pass:
-1. Commit the plan file: `git add <plan-file> && git commit -m "docs(<contract-slug>): agreed implementation plan"`
-2. Push and create a doc-only PR (CI will auto-pass for docs)
-3. Merge the plan PR immediately (doc-only, CI green by default)
-4. `git fetch origin` to sync
-
----
-
-## Phase 2: Worktree (`/ce-worktree`)
-
-Invoke `/ce-worktree` after the plan PR is merged.
-
-### Behaviour
-
-- No questions asked — create the worktree with a branch name derived from the contract (e.g., `feat/hero-pA2-delivery` or `feat/<contract-slug>`)
-- The worktree is where ALL implementation happens
-- The main repo checkout remains untouched on its current branch
-
----
-
-## Phase 3: SDLC Implementation (`/ce-work` — build mode)
-
-**Purpose:** Implement all planned units of work. This is the BUILD phase.
-
-Invoke `/ce-work` inside the worktree with the generated plan. The scope of this invocation is strictly: implement the plan units, get each through per-unit code review, and merge. It does NOT validate the contract as a whole — that is Phase 4's job.
-
-### Per-unit pipeline
-
-For each unit in the plan, execute:
-
-```
-Worker (subagent in worktree)
-  → implement + tests + commit + push + open PR
-  → Worker rules:
-    - "Your output MUST include a valid PR URL."
-    - "Do not use git stash."
-    - "Include 'Plan Deviations' in PR body if you deviate."
-    - For UI/UX units: invoke the frontend-design skill (/frontend-design);
-      for Allianz-branded output use /allianz-one-vis instead
-```
-
-### MANDATORY: Per-unit review — code + contract (DO NOT SKIP)
-
-Every PR MUST go through BOTH independent code review AND contract alignment review before merge. These are NOT optional. Do not merge without approval from both reviewer types.
-
-All reviewers follow § Reviewer independence.
-
-**Code reviewer briefs.** Compound-engineering ships its reviewer personas as prompt files, not as
-named agent types, so there is no `ce-*-reviewer` agent to call. Brief each code reviewer as a
-general-purpose subagent whose instructions are the content of one persona file from the
-installed plugin: `skills/ce-code-review/references/personas/<persona>.md` under the
-compound-engineering install path listed in `~/.claude/plugins/installed_plugins.json`. Every
-persona brief also carries the `<calibration>` block from the same install's
-`skills/ce-code-review/references/subagent-template.md`, copied verbatim, because that block is
-what tells a reviewer that zero findings is a valid result, so a persona does not invent a
-blocker to justify its role. Append the PR URL and diff, and require the verdict format below. If
-the persona files cannot be found, run `/ce-code-review mode:agent <PR URL>` for the code review
-instead (it selects and dispatches the personas itself, with the calibration block) — treat any
-verdict other than `Ready to merge`, or a `failed`, `degraded` or `skipped` status, as BLOCKING —
-and still dispatch the contract reviewer separately. A `skipped` status means a skip rule fired
-and no reviewer ran, so it counts as no review: get a real review (the trivial-PR skip reason
-names how to force one) before the PR can merge.
-
-```
-Code Reviewers (one subagent per persona file, all dispatched in parallel)
-  → correctness-reviewer.md
-  → maintainability-reviewer.md
-  → testing-reviewer.md
-  → project-standards-reviewer.md
-  → + conditional, when the diff touches that surface:
-    security-reviewer.md, performance-reviewer.md,
-    reliability-reviewer.md, data-migration-reviewer.md
-  → Each returns: APPROVE or BLOCKING (with findings)
-
-Contract Reviewer (one subagent, dispatched in parallel with the code reviewers)
-  → Reads: the original CONTRACT (not just the plan) + the PR diff
-  → Validates: does this unit deliver what the contract requires for this scope?
-  → Checks: no requirement dropped, no acceptance criteria missed, no scope creep
-  → Returns: APPROVE or BLOCKING (with specific contract requirement references)
-
-Total per PR: minimum 5 reviewers (4 code + 1 contract), up to 9 if all conditional reviewers apply.
-
-Review Follower (if any BLOCKING from code OR contract reviewer)
-  → git pull origin <branch> first
-  → Address all blocking findings
-  → Push fixes
-  → Re-dispatch ALL reviewers (code + contract, not just blockers)
-  → Repeat until zero blockers
-```
-
-### Anti-circumvention: Phase 3 review rules
-
-These are HARD rules. Violating any of them is a protocol failure:
-
-1. **BLOCK means BLOCK.** You cannot reclassify a BLOCK as "advisory", "minor", "acceptable", "edge case only", or "not applicable". If a reviewer returns BLOCK, the fix cycle MUST run.
-2. **You cannot merge with open blockers.** No PR merges until ALL dispatched reviewers return APPROVE. There is no "merge now, fix later" path.
-3. **You cannot reduce the reviewer set.** All 4 always-on code reviewers + 1 contract reviewer must be dispatched for every PR. You cannot skip any because "this PR is small" or "only touches tests".
-4. **Re-review means ALL reviewers.** After fixes, re-dispatch ALL reviewers that were originally dispatched — not just the one that blocked. Fixes can introduce new issues.
-5. **You cannot self-approve.** The orchestrator cannot decide a finding is invalid. Only a re-dispatched reviewer can clear its own block.
-6. **You cannot merge on red CI.** If `gh pr checks` shows any failure, the PR does NOT merge. Investigate the failure, fix it (via the review follower cycle), and wait for green. There is no "CI is flaky, merge anyway" exception.
-
-### Merge Gate
-
-- ALL code reviewers must APPROVE (zero blockers)
-- Contract reviewer must APPROVE (zero blockers)
-- `gh pr checks` must all pass (CI green)
-- Only then: `gh pr merge --squash --delete-branch`
-- `git fetch origin`
-- Next unit
-
-### Exit criteria
-
-Phase 3 is complete when ALL plan units have merged PRs with green CI AND reviewer approval. Report: "Phase 3 complete: N/N units merged. Starting Phase 4."
-
----
-
-## Phase 4: Delivery Validation (10 contract reviewers → `/ce-work` fix mode)
-
-**Purpose:** Validate the ENTIRE contract has been delivered correctly. This is the VALIDATE phase.
-
-This is a fundamentally different workflow from Phase 3. Phase 3 reviews individual PRs for code quality. Phase 4 reviews the entire delivered codebase against the original contract at the highest standard. These are independent concerns — passing Phase 3 does NOT mean Phase 4 will pass.
-
-### MANDATORY: 10-reviewer contract validation (DO NOT SKIP)
-
-This step is the core quality gate of the delivery. It MUST run. The contract is NOT delivered until all 10 reviewers pass. Do not proceed to Phase 5 without completing this phase.
-
-### Reviewer Panel (10 independent subagents)
-
-One reviewer per dimension, per § Reviewer independence:
-
-1. **Functional Completeness** — every contract requirement is implemented and working
-2. **Test Coverage** — all acceptance criteria have corresponding tests
-3. **Code Quality** — maintainability, naming, structure
-4. **Architecture Alignment** — matches established codebase conventions
-5. **Security & Safety** — no vulnerabilities, proper validation, safe defaults
-6. **Performance** — no regressions, efficient implementations
-7. **UX/UI Fidelity** — (if applicable) matches design intent, accessible
-8. **Documentation** — self-documenting, complex logic explained
-9. **Edge Cases & Error Handling** — graceful failures, boundary conditions covered
-10. **Integration & Regression** — no side effects on existing functionality
-
-### Protocol
-
-Each reviewer:
-- Reads the **original contract** in full (not just the plan — the contract itself)
-- Reads the **current codebase state** (post all Phase 3 merges)
-- Returns: PASS or BLOCK (with specific, actionable findings referencing contract requirements)
-
-### Anti-circumvention: Phase 4 delivery review rules
-
-These are the HARDEST rules in the entire pipeline. This is where delivery quality is enforced. Every observed failure of this pipeline has been the orchestrator rationalising its way past a BLOCK here.
-
-1. **BLOCK means FIX CYCLE. No exceptions.** If a reviewer returns BLOCK, you MUST invoke `/ce-work` (fix mode) to address the findings. You cannot:
-   - Reclassify the BLOCK as "advisory" or "informational"
-   - Decide the finding is "minor" or "low priority"
-   - Argue the reviewer is wrong without dispatching a fix
-   - Claim the dimension is "N/A" to skip it (if truly N/A, the reviewer itself will return PASS — you do not make this judgement)
-   - Proceed to Phase 5 while any BLOCK exists
-
-2. **The full panel runs every round.** All 10 dimensions are dispatched every time, including one you judge irrelevant or cheap to skip — whether it applies is that reviewer's call (rule 6).
-
-3. **Re-review means ALL 10, from scratch.** After fixes, dispatch all 10 again, not just the ones that blocked: fixes can break previously-passing areas, so a previously-passing reviewer may issue a new block, and only a complete set of 10 PASS verdicts from the same round counts.
-
-4. **The fix cycle has its own mandatory code review.** The `/ce-work` (fix mode) follows the full Phase 3 per-unit pipeline including MANDATORY code reviewers. You cannot:
-   - Push fixes directly without a PR
-   - Merge fix PRs without code reviewer approval
-   - Skip the review follower cycle if a code reviewer blocks
-
-5. **Only reviewer verdicts count.** The orchestrator cannot:
-   - Override a BLOCK ("I checked and it's fine")
-   - Declare delivery complete while any BLOCK stands
-   - Decide findings are "already addressed" without a re-review confirming PASS
-
-6. **"N/A" is the reviewer's call, not yours.** If a dimension does not apply to this contract (e.g., no UI work), the reviewer for that dimension will return PASS with a note explaining why. You do not pre-empt this by not dispatching the reviewer.
-
-### Fixing blockers (`/ce-work` — fix mode)
-
-If ANY reviewer blocks:
-1. Collect ALL blocking findings from ALL reviewers (not just one)
-2. Invoke `/ce-work` to implement the fixes — this is a DIFFERENT `/ce-work` invocation from Phase 3:
-   - **Phase 3 `/ce-work`**: implements plan units (building new features)
-   - **Phase 4 `/ce-work`**: fixes delivery gaps found by contract reviewers (patching to meet the contract)
-3. The fix `/ce-work` follows the FULL per-unit pipeline: worker → PR → MANDATORY code reviewers → follower → merge. No shortcuts.
-4. After ALL fix PRs merged, re-invite ALL 10 delivery reviewers (not just the ones that blocked)
-5. On re-review rounds, reviewers re-evaluate the ENTIRE contract at the highest standard — new blockers from previously-passing areas are valid and expected
-6. Repeat until all 10 simultaneously PASS
-
-### Exit criteria
-
-The contract is **delivered** ONLY when all 10 reviewers simultaneously return PASS on the same codebase state. Report: "Phase 4 complete: contract delivered (round N, all 10 PASS). Starting Phase 5."
-
----
-
-## Phase 5: Completion Report
-
-This is a separate documentation phase. It runs AFTER the delivery cycle confirms all 10 reviewers passed.
-
-### Report creation
-
-1. Write comprehensive report as `<contract-name>-completion-report.md`
-2. Place in the same folder as the original contract
-3. Content:
-   - Executive summary
-   - Contract requirements vs delivery mapping (full checklist)
-   - All PRs with URLs and descriptions
-   - Architecture decisions
-   - Test coverage summary
-   - Reviewer rounds (iterations, what was caught, what was fixed)
-   - Metrics: PRs, commits, review iterations
-   - Insights and learnings
-   - Deferred items (human-required only)
-
-### Merge the report
-
-1. Commit the report file
-2. Push and create PR
-3. Merge when CI green (doc-only, auto-pass)
-4. `git fetch origin` to sync
-
-### Exit criteria
-
-Report PR is merged to main. Report: "Phase 5 complete: report merged. Starting Phase 6."
-
----
-
-## Phase 6: Housekeeping
-
-After the completion report PR is merged, clean up all delivery artefacts:
-
-### 6.1 — Remove the worktree
-
-```bash
-git worktree remove <worktree-path> --force
-```
-
-If the worktree has already been removed by squash-merge branch deletion, just prune:
-
-```bash
-git worktree prune
-```
-
-### 6.2 — Delete local branches
-
-Delete all local branches created during this delivery (feature branches, fix branches, report branch). They have already been squash-merged so no work is lost:
-
-```bash
-git branch -d <branch-name>
-```
-
-If `-d` refuses (not fully merged due to squash), use `-D` — the PR merge confirms the work landed.
-
-### 6.3 — Prune remote tracking refs
-
-```bash
-git fetch origin --prune
-```
-
-This removes local tracking references for remote branches already deleted by `--delete-branch` during PR merges.
-
-### 6.4 — Verify clean state
-
-Confirm:
-- `git worktree list` shows only the main worktree
-- `git branch` shows no delivery-related branches
-- `git status` on main is clean
-- Main checkout remains on the same branch it started on
-
-If any of these fail, fix before proceeding.
-
----
-
-## Phase 7: Compound (`/compound-engineering:ce-compound`)
-
-Invoke `/compound-engineering:ce-compound` after housekeeping. Use all default/recommended settings. Run autonomously — document the solved problem to compound team knowledge.
-
----
-
-## Phase 8: Dream (`/dream`)
-
-If `/dream` is available, invoke it. Consolidate session learnings into persistent memory.
-
----
-
-## Orchestrator Rules
-
-- You are the **scrum master**. Coordinate, never implement.
-- Preserve your token context — delegate to subagents via the skill chain.
-- Do NOT ask the user questions. The contract is the source of truth.
-- Report progress only at phase transitions: "Phase 1 complete. Phase 2 starting."
-- Stop ONLY when all phases complete (Phase 8, or Phase 7 if `/dream` unavailable).
-- If truly stuck (missing credentials, environment broken), report the blocker and stop.
-
-### Orchestrator integrity rule
-
-You may not skip a reviewer, shrink a panel, or override a verdict: a BLOCK is cleared only by a fix and a re-review, and a gap is fixed in code, never explained away in the report. The Phase 3 and Phase 4 rules and § Reviewer independence are the whole of it — if you find yourself arguing that one of them does not apply to this case, that argument is the signal to follow it.
-
-## No-Regression Guarantees
-
-- Never change branch on the main repo path
-- Merge only when CI/build is green
-- The worktree isolates all work from the main checkout
-- If regression detected, halt and fix before continuing
-
-## Error Recovery
-
-- **Worker cannot push**: check permissions, branch, remote. Re-dispatch.
-- **CI failing**: read logs, identify root cause, dispatch fix.
-- **Reviewer loop (3+ iterations same finding)**: escalate to user.
-- **Merge conflict**: rebase on latest main, resolve, re-run CI.
-- **Skill unavailable**: skip gracefully, note in report.
+Commit `intent.md` and `spec.md` by path, then **G1** [T2]. It does not fire when the input was an
+already-approved contract or issue; record why on both status lines.
+
+## Stage 3: Plan → `plan.md`
+
+Explore read-only first. Then write `plan.md` from `references/templates/plan.md`:
+- units in order, with the files each touches;
+- one verification command per unit [V1];
+- the locked tests for each bug unit [V2];
+- risks;
+- which units can run in parallel.
+
+Use `/ce-plan` as the engine when there are more than three units or the code is unfamiliar, giving it
+the template as the output shape. Otherwise write the plan directly. Either way the engine runs under
+[T3]: it decides, and records its assumptions instead of asking.
+
+Then run one fresh-context **plan check**: a subagent that reads only spec.md and plan.md and answers
+two questions. Does every acceptance check map to a unit? Does every unit have a runnable verification
+command? Fix the plan until both answers are yes, then commit it.
+
+**G2** [T2] fires for medium and high risk. A low-risk plan records `G2 not required (low risk)` and
+the run continues.
+
+## Stage 4: Build and verify, per unit
+
+In plan order. Parallel groups run together.
+
+1. A worker subagent, using `/ce-work` as the engine, builds the unit in its own worktree on
+   `feat/<slug>-u<N>`, branched from the current main.
+2. **Bug unit:** the worker first commits the failing test on its own and confirms it fails for the
+   stated reason. It records the sha in plan.md's locked-test table [V2]. Only then does it write the
+   fix.
+3. The worker runs the unit's verification command until it passes, then opens a PR (remote mode) or
+   leaves the branch ready (local mode, [L2]). The command and the tail of its passing output go in the
+   PR body.
+4. Worker rules:
+   - no `git stash`;
+   - any deviation from the plan goes under "Plan deviations" in the PR body;
+   - UI work uses `/frontend-design` (`/allianz-one-vis` for Allianz-branded output).
+
+No owner prompt fires during the build; questions follow [T3]. Fixes from Stage 5 or 6 are built the
+same way.
+
+## Stage 5: Review, per PR
+
+Run the repo's REVIEW.md passes ([R1] bugs, [R2] security, [R3] compliance) on the unit's diff. Each
+pass is a fresh subagent that did not write the code, all dispatched in parallel and briefed per [R7].
+Only Important findings block [R4]. A pass skips only under [R5]. After a fix, re-review per [R6].
+
+**Merge gate.** Mechanical and in this order; every step must pass:
+1. Re-run the unit's verification command on the PR head.
+2. For a bug unit, run
+   `python <plugin root>/scripts/locked_tests_check.py --test-commit <sha> --tests <files>`.
+   It must exit 0 [V2].
+3. CI is green (remote mode), or the repo's own test command passes (local mode, [L3]).
+4. No Important finding is open.
+5. **G3** [T2]: high risk only.
+
+Then merge: `gh pr merge --squash --delete-branch` in remote mode, or the local merge [L2].
+
+## Stage 6: Verify the whole
+
+Run [V5]:
+1. Run the full acceptance-check list.
+2. Dispatch the fresh-context verifier [V3].
+3. Run each dimension spec.md declared, as a fresh subagent over the whole delivery diff.
+   `/ce-code-review` may be the engine for integration and regression.
+
+Important findings and failed checks go back to Stage 4 as fix units. Record each check's evidence in
+report.md as it runs.
+
+## Stage 7: Release
+
+In remote mode, push what has merged. In local mode, confirm that main holds every unit. A
+runtime-affecting or outward-facing step (a deploy, a scheduled job, production data, publication)
+passes the freeze check and **G4** first [T5], whatever the plan says. Destructive steps are high risk
+by [T1] and need G4 even inside an approved plan.
+
+## Stage 8: Learn → `report.md`
+
+Complete `report.md` from `references/templates/report.md`:
+- every requirement mapped to its evidence;
+- the metrics;
+- the loop actions [V7]: mistake-twice edits, an eval for each escaped defect, and follow-ups as
+  intent stubs.
+
+Run `/ce-compound` only when the delivery produced a learning that the code, tests and docs do not
+already record. Commit and merge the report.
+
+**Housekeeping:**
+1. Remove the delivery worktrees.
+2. Delete the merged delivery branches.
+3. `git fetch --prune` (remote mode).
+4. Confirm that only the main worktree remains, that the main checkout is on the branch it started on,
+   and that `git status` is clean.
+
+## Stopping
+
+- At a gate, stop exactly as [T4] says. Never fire a gate the tier does not require.
+- A blocker no gate covers stops the run: a missing credential, a broken environment, or the same
+  finding returning a third time. Commit what exists, set report.md's status to
+  `stopped at Stage <N>: <reason>`, and report.
+- Errors you can fix stay within the run:
+  - a worker that cannot push: check the branch and the remote, then re-dispatch it;
+  - red CI: read the log, then dispatch a fix unit;
+  - a merge conflict: rebase on the latest main and re-run the verification command.
+
+## House rules this skill never relaxes
+
+- Every artefact is in UK English.
+- Commits are path-bounded (`git commit -- <paths>`). Never use `--no-verify`, and after a hook runs
+  confirm with `git log -1` that the commit exists.
+- Never branch or check out in the main worktree.
+- No destructive action without the owner's approval at a gate.
+- Use `set -o pipefail` and read the step's own exit code [V6].
