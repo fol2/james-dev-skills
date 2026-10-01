@@ -1,5 +1,0 @@
-{
-  "name": "enable-dream",
-  "version": "1.3.0",
-  "description": "Patch Claude Code to enable /dream and auto-dream memory consolidation on gated builds (macOS + Windows + Linux). Includes /dream slash command for v2.1.146+ where the native command was removed."
-}

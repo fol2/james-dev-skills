@@ -18,11 +18,6 @@
       "name": "humanise",
       "description": "Rewrite AI-generated text to pass detection scanners",
       "source": "./plugins/humanise"
-    },
-    {
-      "name": "enable-dream",
-      "description": "Patch Claude Code binary to enable /dream and auto-dream",
-      "source": "./plugins/enable-dream"
     }
   ]
 }

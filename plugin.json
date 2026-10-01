@@ -13,10 +13,6 @@
     {
       "name": "humanise",
       "source": "plugins/humanise"
-    },
-    {
-      "name": "enable-dream",
-      "source": "plugins/enable-dream"
     }
   ]
 }

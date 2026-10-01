@@ -18,11 +18,6 @@
       "name": "humanise",
       "description": "Rewrite AI-sounding text in a natural human voice, for the dissertation and casual registers only",
       "source": "./plugins/humanise"
-    },
-    {
-      "name": "enable-dream",
-      "description": "Patch Claude Code binary to enable /dream and auto-dream",
-      "source": "./plugins/enable-dream"
     }
   ]
 }
