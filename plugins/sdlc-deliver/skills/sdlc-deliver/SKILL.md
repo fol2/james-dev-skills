@@ -194,11 +194,17 @@ All reviewers follow § Reviewer independence.
 named agent types, so there is no `ce-*-reviewer` agent to call. Brief each code reviewer as a
 general-purpose subagent whose instructions are the content of one persona file from the
 installed plugin: `skills/ce-code-review/references/personas/<persona>.md` under the
-compound-engineering install path listed in `~/.claude/plugins/installed_plugins.json`. Append the
-PR URL and diff, and require the verdict format below. If the persona files cannot be found, run
-`/ce-code-review mode:agent <PR URL>` for the code review instead (it selects and dispatches the
-personas itself) — treat any verdict other than `Ready to merge`, or a `failed`/`degraded`
-status, as BLOCKING — and still dispatch the contract reviewer separately.
+compound-engineering install path listed in `~/.claude/plugins/installed_plugins.json`. Every
+persona brief also carries the `<calibration>` block from the same install's
+`skills/ce-code-review/references/subagent-template.md`, copied verbatim, because that block is
+what tells a reviewer that zero findings is a valid result, so a persona does not invent a
+blocker to justify its role. Append the PR URL and diff, and require the verdict format below. If
+the persona files cannot be found, run `/ce-code-review mode:agent <PR URL>` for the code review
+instead (it selects and dispatches the personas itself, with the calibration block) — treat any
+verdict other than `Ready to merge`, or a `failed`, `degraded` or `skipped` status, as BLOCKING —
+and still dispatch the contract reviewer separately. A `skipped` status means a skip rule fired
+and no reviewer ran, so it counts as no review: get a real review (the skip reason names how to
+force one) before the PR can merge.
 
 ```
 Code Reviewers (one subagent per persona file, all dispatched in parallel)
