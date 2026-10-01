@@ -232,7 +232,7 @@ Ranked by impact. These patterns make text appear more human.
 ### P13: Sentence Fragments as Statements
 - Dropping subject occasionally feels natural.
 - **Do**: "Compared how the different algorithms performed." (no "I")
-- **Don't**: Give every sentence a full subject and verb (Casual register only; the Dissertation register avoids fragments)
+- **Don't**: Give every sentence a full subject and verb (a deliberate fragment is a style choice in either register, used sparingly; see N27)
 
 ## Medium
 
