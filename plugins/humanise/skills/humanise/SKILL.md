@@ -1,14 +1,16 @@
 ---
 name: humanise
-description: "Rewrites AI-generated or AI-detected text to read more naturally and avoid AI detection patterns. Applies register-appropriate human markers (positive signals) and removes statistical AI signals (negative signals). Two registers: Dissertation (formal documents) and Casual (emails, notes). Use when text has been flagged as AI-generated, when you need to make writing sound more human, or when preparing academic/professional documents that must pass AI detection scanning."
+description: "Rewrites AI-generated or AI-sounding text in a natural human voice for two registers only: Dissertation (dissertations and academic or apprenticeship portfolio writing) and Casual (informal emails, notes). Applies register-appropriate human markers (positive signals) and removes statistical AI signals (negative signals) without introducing spelling or grammar errors. Use when dissertation or casual text has been flagged as AI-generated or needs to sound more human. Not for professional-register business deliverables (analysis write-ups, client-facing packs, business correspondence); for plain professional prose use ce-noslop instead."
 ---
 
 # Humanise Writing Skill
 
 ## Purpose
-Rewrite AI-generated or AI-detected text to read more naturally and avoid AI detection patterns.
+Rewrite AI-generated or AI-detected text to read more naturally and avoid AI detection patterns, in the Dissertation and Casual registers only.
 
-**Scope:** not for business deliverables written in the repo's professional UK register (analysis write-ups, client-facing packs, business correspondence). Those must stay precise and correct, and the markers below (contractions, fillers, vague endings) would degrade them.
+**Scope:** not for business deliverables written in the repo's professional UK register (analysis write-ups, client-facing packs, business correspondence). Those must stay precise and correct, and the markers below (contractions, fillers, vague endings) would degrade them. For plain professional prose, use ce-noslop instead.
+
+**No errors, in either register.** Every marker below changes rhythm, voice or structure. None adds a spelling, grammar or punctuation error, because an error costs the writer credibility (and marks, in a dissertation) and the human signal does not need one.
 
 ## Usage
 
@@ -17,7 +19,7 @@ Rewrite AI-generated or AI-detected text to read more naturally and avoid AI det
 **Input:** Paste the text you want to humanise.
 
 **Process:**
-1. Determine appropriate register (Dissertation for formal documents, Casual for informal)
+1. Determine appropriate register (Dissertation for academic writing, Casual for informal)
 2. Apply positive signals (human markers)
 3. Avoid negative signals (AI markers)
 4. Preserve original meaning
@@ -30,7 +32,7 @@ Rewrite AI-generated or AI-detected text to read more naturally and avoid AI det
 
 Choose appropriate register based on document type:
 
-## Dissertation Register (Dissertations, Reports, Professional Documents)
+## Dissertation Register (Dissertations, Academic and Apprenticeship Portfolio Writing)
 Use these patterns:
 - First person "I've identified", "I've documented", "I've specified", "I've also addressed"
 - Professional connectors: "along with", "This covers", "This addresses"
@@ -152,10 +154,10 @@ Ranked by impact. These patterns make text appear more human.
 - **Don't**: Always write in third person
 - **Caution**: Don't start every sentence/bullet with "I've" - vary the placement
 
-### P03: Minor Grammatical Imperfections
-- AI writes perfectly. Humans make small errors.
-- **Do**: Allow slightly awkward phrasing, small redundancy, occasional grammar slip
-- **Don't**: Polish every sentence to perfection
+### P03: Rhythm and Voice Variation (no errors)
+- AI prose has one finish: every sentence about the same length, every clause equally tidy, every paragraph the same shape. Humans vary the rhythm, and the variation is the signal, not mistakes.
+- **Do**: Follow a long sentence with a short one, start the odd sentence with "And" or "But", drop in a parenthetical aside, let one point run longer than its neighbours, repeat a word on purpose for emphasis
+- **Don't**: Insert spelling, grammar or punctuation errors, or awkward phrasing on purpose. Correct prose with an uneven rhythm reads as human; an error only reads as careless
 
 ## High
 
@@ -230,7 +232,7 @@ Ranked by impact. These patterns make text appear more human.
 ### P13: Sentence Fragments as Statements
 - Dropping subject occasionally feels natural.
 - **Do**: "Compared how the different algorithms performed." (no "I")
-- **Don't**: Every sentence must be grammatically complete
+- **Don't**: Give every sentence a full subject and verb (Casual register only; the Dissertation register avoids fragments)
 
 ## Medium
 
@@ -409,6 +411,7 @@ Short sentences that are too "perfect" still trigger AI.
 - Use fragments occasionally ("Compared how...")
 - Use filler words ("actually", "really", "basically", "some")
 - Use vague endings ("improve things" not "improve business outcomes")
+- Vary sentence length and rhythm (a short sentence after a long one)
 
 **Always AVOID:**
 - "actionable insights" and similar AI phrases
@@ -417,7 +420,8 @@ Short sentences that are too "perfect" still trigger AI.
 - Passive voice ("is handled through")
 - Academic words ("quantitative")
 - Purpose explanations ("for X", "to achieve Y")
-- Perfect grammar throughout
+- Uniform rhythm throughout (every sentence the same length and shape)
+- Deliberate spelling, grammar or punctuation errors (vary rhythm and voice instead)
 
 ---
 
