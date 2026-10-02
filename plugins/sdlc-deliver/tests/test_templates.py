@@ -18,7 +18,7 @@ REQUIRED = {
     "intent.md": ["In the originator's words", "Problem", "Outcome wanted", "Constraints", "Non-goals",
                   "Open questions for the owner"],
     "spec.md": ["Risk tier", "Requirements", "Design", "Review dimensions", "Acceptance checks", "Assumptions"],
-    "plan.md": ["Units", "Parallel groups", "Locked tests", "Risks", "Assumptions"],
+    "plan.md": ["Units", "Parallel groups", "What each test catches", "Locked tests", "Risks", "Assumptions"],
     "report.md": ["Requirement → evidence", "Units and PRs", "Findings", "Metrics", "Learnings and loop",
                   "Deferred: requires a human"],
 }

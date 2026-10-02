@@ -21,6 +21,15 @@ One verification command per unit (verification.md [V1]). A unit without one goe
 
 <Which units can be built at the same time, e.g. "U1 and U2 together; U3 after both". "None: strictly sequential." is valid.>
 
+## What each test catches
+
+Per verification.md [V2]: one row per acceptance check. The plan check rejects a row whose wrong
+implementation would also pass the test.
+
+| Check | Test | A plausible wrong implementation it fails |
+|---|---|---|
+| <A1> | `<test id>` | <e.g. a date parser that reads 03/04/2026 as 4 March> |
+
 ## Locked tests
 
 Bug units commit the failing test first (verification.md [V2]). The test commit is filled in at build

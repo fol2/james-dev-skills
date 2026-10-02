@@ -94,8 +94,12 @@ the template as the output shape. Otherwise write the plan directly. Either way 
 [T3]: it decides, and records its assumptions instead of asking.
 
 Then run one fresh-context **plan check**: a subagent that reads only spec.md and plan.md and answers
-two questions. Does every acceptance check map to a unit? Does every unit have a runnable verification
-command? Fix the plan until both answers are yes, then commit it.
+three questions. Does every acceptance check map to a unit? Does every unit have a runnable verification
+command? Does every test name a plausible wrong implementation it fails [V2], and would that
+implementation really fail it? Fix the plan until all three answers are yes, then commit it.
+
+Every subagent in every stage is `sdlc-worker`, or `sdlc-verifier` for [V3]: Opus 5.5 at xhigh effort,
+never overridden by a `model` parameter [V8].
 
 **G2** [T2] fires for medium and high risk. A low-risk plan records `G2 not required (low risk)` and
 the run continues.

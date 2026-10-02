@@ -30,6 +30,12 @@ For a bug, the test is written and committed **before** the fix, so the fix cann
 Acceptance-check tests written before their code may be locked the same way. A locked test that is
 itself wrong is unlocked only by the owner at a gate, never by a worker.
 
+**Every test names a plausible wrong implementation it fails.** plan.md's "What each test catches"
+table gives, per acceptance check, the test and one concrete wrong implementation it rejects. That
+implementation must be one a competent author could ship: a date parser that reads 03/04/2026 as
+4 March, or a cleanup that reports "removed" without checking the path is absent. A test that a
+wrong implementation would also pass proves only that the code runs.
+
 ## [V3] Fresh-context verifier
 
 One subagent that did not build anything, with **Bash and Read only**. Its brief: spec.md, the
@@ -94,3 +100,16 @@ When a prose rule keeps being broken, the fix is to turn it into one of these.
   TODO document.
 - **Metrics** go in report.md every time: first-pass verify rate, review rounds per PR, Important
   findings per PR, owner wait time per gate, elapsed time per stage.
+
+## [V8] Every subagent runs Opus 5.5 at xhigh effort
+
+Dispatch every subagent this skill uses as one of the plugin's two agents. Both pin `model: opus`
+(Opus 5.5) and `effort: xhigh` in their frontmatter.
+- **`sdlc-verifier`**, with Bash and Read only, is the fresh-context verifier [V3].
+- **`sdlc-worker`** covers everything else: the plan check, unit workers, review passes and
+  declared dimensions.
+
+Never pass a `model` parameter to the Agent tool. A per-invocation model overrides the frontmatter,
+so passing one silently undoes the pin. The Agent tool has no effort parameter, so the frontmatter's
+effort holds. If neither agent is available (the plugin's agents did not load), say so in the run log
+and continue on the session's model, rather than claiming the pin.
