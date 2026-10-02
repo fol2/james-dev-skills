@@ -1,0 +1,2 @@
+# Scaffold scripts run under bash; a CRLF checkout breaks them.
+*.sh text eol=lf
